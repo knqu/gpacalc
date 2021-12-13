@@ -4,6 +4,7 @@ from rich.table import Table
 from os import mkdir, listdir
 from os.path import exists
 from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment
 
 semantic = Theme({
     'prompt': '#10a4e8 bold',
@@ -33,26 +34,26 @@ def menu():
     console.print('What would you like to do?', style='prompt')
     console.print('[ n ] create new record')
     console.print('[ v ] view current record')
-    console.print('[ e ] edit current record')
-    console.print('[ s ] export record as spreadsheet')
+    console.print('[ d ] delete record element')
+    console.print('[ e ] export record as spreadsheet')
     console.print('[ h ] help')
     console.print('[ x ] exit')
-    inpt = console.input('\n> ')
+    inpt = console.input('\n> ').lower()
 
     if inpt == 'n':
         new()
     elif inpt == 'v':
         view()
+    elif inpt == 'd':
+        delete()
     elif inpt == 'e':
-        edit()
-    elif inpt == 's':
         export()
     elif inpt == 'h':
         hr()
         console.print('[ c ] create new record - creates a blank record and prompts you for element values')
         console.print('[ v ] view current record - view current record')
-        console.print('[ e ] edit current record - change elements of current record')
-        console.print('[ s ] export record as spreadsheet - export current record as an excel (.xlsx) file')
+        console.print('[ d ] delete record element - delete a specific class in the record')
+        console.print('[ e ] export record as spreadsheet - export current record as an excel (.xlsx) file')
         console.input('\npress [ enter ] to continue > ')
     elif inpt == 'x':
         console.print('\nThank you for using gpacalc. Exiting program.', style='info')
@@ -70,8 +71,9 @@ def new():
         global record
 
         inpt = ''
-        while inpt != 'done':
+        while inpt.lower() != 'done':
             console.print('\nPlease enter a class | letter grade | weight', style='prompt')
+            console.print("Enter 'done' to finish", style='prompt')
             inpt = console.input('> ')
 
             if inpt != 'done':
@@ -171,7 +173,7 @@ def new():
     console.print('Would you like to view the tutorial?', style='prompt')
     console.print('[ y ] yes')
     console.print('[ n ] no, i know what to do already')
-    inpt = console.input('\n> ')
+    inpt = console.input('\n> ').lower()
 
     if inpt == 'y':
         console.print('\nEnter the names of classes in the following format: class | letter grade | weight')
@@ -211,98 +213,64 @@ def view():
 
     console.input('\npress [ enter ] to continue > ')
 
-def edit():
+def delete():
     global record
-
     hr()
-    console.print('What class would you like to edit/ delete (note that this is case-sensitive)? (enter [ x ] to cancel)', style='prompt')
-    edit_class = console.input('> ')
+    console.print('What class would you like to delete (note that this is case-sensitive)?', style='prompt')
+    console.print('Enter [ x ] to cancel', style='prompt')
+    del_class = console.input('\n> ')
 
-    if edit_class == 'x':
+    if del_class.lower() == 'x':
         menu()
-    elif edit_class in record_classes():
-        console.print(f'\nWhat value of {edit_class} would you like to edit?', style='prompt')
-        console.print('[ 1 ] class name')
-        console.print('[ 2 ] letter grade')
-        console.print('[ 3 ] class weight')
-        console.print('[ 4 ] delete class')
-        console.print('[ x ] cancel')
-        inpt = console.input('> ')
+    elif del_class in record_classes():
+        ls = record_classes()
+        idx = 0
+        itr = 0
+        while itr < len(ls):
+            if ls[itr] == del_class:
+                idx = itr
+            itr += 1
 
-        if inpt == '1':
-            console.print(f'\nWhat would you like to change the name of {edit_class} to?', style='prompt')
-            new = console.input('> ')
+        record.pop(idx)
 
-            existing_classes = record_classes().remove(edit_class)
-
-            if new and len(new) <= 24 and new not in existing_classes:
-                ls = record_classes()
-                idx = 0
-                itr = 0
-                while itr < len(ls):
-                    if ls[itr] == edit_class:
-                        idx = itr
-                    itr += 1
-
-                record[idx]['class'] = new
-
-                console.print('\nClass name successfully changed!', style='success')
-                console.input('press [ enter ] to continue > ')
-                menu()
-        elif inpt == 'x':
-            menu()
-        else:
-            console.print('\n[ERROR] Please enter a valid option.', style='error')
-            console.input('press [ enter ] to continue > ')
-            edit()
+        console.print('\nClass successfuly deleted!', style='success')
+        console.input('press [ enter ] to continue > ')
+        menu()
     else:
         console.print('\n[ERROR] No matching class name. Please try again.', style='error')
-        console.input('\npress [ enter ] to continue > ')
-        edit()
+        console.input('press [ enter ] to continue > ')
+        delete()
 
 def export():
     hr()
-    console.print("Would you like to convert your current record to a Excel (.xlsx) file?", style='prompt')
+    console.print("Would you like to export your current record to a Excel (.xlsx) file?", style='prompt')
     console.print('[ y ] yes')
     console.print('[ n ] no')
 
-    inpt = console.input('\n> ')
+    inpt = console.input('\n> ').lower()
 
     if inpt == 'y' and len(record) > 0:
         files = listdir()
         if 'records' not in files:
             mkdir('records')
 
-        i = 1
-        while exists(f'gpacalc{i}.xlsx'):
-            i += 1
+        if exists('records/gpacalc.xlsx'):
+            console.print("\nYou currently have another file titled 'gpacalc.xlsx'", style='prompt')
+            console.print('Would you like to overwrite this file?', style='prompt')
+            console.print('[ y ] yes, overwrite the file')
+            console.print('[ n ] no, take me back to the menu')
+            inpt = console.input('\n> ').lower()
 
-        file_name = f'gpacalc{i}.xlsx'
-
-        workbook = Workbook()
-        worksheet = workbook.active
-        worksheet.title = 'gpacalc'
-        worksheet.sheet_properties.tabColor = "5993f0"
-
-        worksheet.cell(row=1, column=1, value='CLASS')
-        worksheet.cell(row=1, column=2, value='GRADE')
-        worksheet.cell(row=1, column=3, value='WEIGHT')
-        worksheet.cell(row=1, column=4, value='GPA')
-
-        itr = 0
-        while itr < len(record):
-            worksheet.cell(row=itr+2, column=1, value=record[itr]['class'])
-            worksheet.cell(row=itr+2, column=2, value=record[itr]['grade'])
-            worksheet.cell(row=itr+2, column=3, value=record[itr]['weight'])
-            worksheet.cell(row=itr+2, column=4, value=record[itr]['gpa'])
-            itr += 1
-
-        workbook.save(filename=f'records/{file_name}')
-
-        console.print(f"\nSpreadsheet titled '{file_name}' successfully generated in the records folder!", style='success')
-        console.print('To open this file, you would need an external tool such as Google Sheets or Microsoft Excel.')
-        console.input('press [ enter ] to continue > ')
-        menu()
+            if inpt == 'y':
+                generateSheet()
+            elif inpt == 'n':
+                menu()
+            else:
+                console.print('\n[ERROR] Please enter a valid option.', style='error')
+                console.input('press [ enter ] to continue > ')
+                export()
+        else:
+            generateSheet()
     elif inpt == 'y' and len(record) == 0:
         console.print('\n[ERROR] You must have at least one element in your record to export it as .csv', style='error')
         console.input('press [ enter ] to continue > ')
@@ -344,7 +312,49 @@ def calculateGPA(weight):
             elif el['grade'] == 'f':
                 addGPA += 0.0
     return round(addGPA / len(record), 3)
-    
+
+def generateSheet():
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.title = 'gpacalc'
+
+    worksheet.cell(row=1, column=1, value='CLASS')
+    worksheet.cell(row=1, column=2, value='GRADE')
+    worksheet.cell(row=1, column=3, value='WEIGHT')
+    worksheet.cell(row=1, column=4, value='GPA')
+    worksheet.cell(row=3, column=1, value='Weighted GPA')
+    worksheet.cell(row=3, column=4, value=f"{calculateGPA('w')}")
+    worksheet.cell(row=4, column=1, value='Unweighted GPA')
+    worksheet.cell(row=4, column=4, value=f"{calculateGPA('u')}")
+
+    worksheet['A1'].font = Font(bold=True)
+    worksheet['B1'].font = Font(bold=True)
+    worksheet['C1'].font = Font(bold=True)
+    worksheet['D1'].font = Font(bold=True)
+
+    worksheet['D3'].alignment = Alignment(horizontal='right')
+    worksheet['D4'].alignment = Alignment(horizontal='right')
+
+    worksheet.column_dimensions['A'].width = 30
+    worksheet.column_dimensions['B'].width = 10
+    worksheet.column_dimensions['C'].width = 10
+    worksheet.column_dimensions['D'].width = 10
+
+    itr = 0
+    while itr < len(record):
+        worksheet.cell(row=itr+6, column=1, value=record[itr]['class'])
+        worksheet.cell(row=itr+6, column=2, value=record[itr]['grade'].upper())
+        worksheet.cell(row=itr+6, column=3, value=record[itr]['weight'].upper())
+        worksheet.cell(row=itr+6, column=4, value=record[itr]['gpa'])
+        itr += 1
+
+    workbook.save(filename='records/gpacalc.xlsx')
+
+    console.print("\nSpreadsheet titled 'gpacalc.xlsx' successfully generated in the records folder!", style='success')
+    console.print('To open this file, you should use an external tool such as Google Sheets or Microsoft Excel.')
+    console.input('press [ enter ] to continue > ')
+    menu()
+
 def record_classes():
     class_names = []
     for el in record:
